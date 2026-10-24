@@ -44,6 +44,8 @@ public class DefaultActionConfigurationUtil {
       ActionConfiguration.create(Action.CHANGE_ENTITY_NAME, "Rename"),
       ActionConfiguration.create(Action.EDIT_DEFINING_SQL, "Edit Defining SQL"),
       ActionConfiguration.create(Action.VIEW_DEFINING_SQL, "View Defining SQL"),
+      ActionConfiguration.create(Action.VIEW_LINEAGE, "Lineage"),
+      ActionConfiguration.create(Action.OPEN_SQL_WORKSHEET, "SQL Worksheet"),
       ActionConfiguration.create(Action.SHOW_ANNOTATIONS, "Annotations"),
       ActionConfiguration.create(Action.CREATE_NEW_GRID, WORKING_COPY),
       ActionConfiguration.create(Action.UPLOAD_FILE, "Upload/Link File"),

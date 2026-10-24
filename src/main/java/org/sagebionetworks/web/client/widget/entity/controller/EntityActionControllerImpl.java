@@ -98,9 +98,11 @@ import org.sagebionetworks.web.client.jsinterop.reactquery.QueryClient;
 import org.sagebionetworks.web.client.place.AccessRequirementsPlace;
 import org.sagebionetworks.web.client.place.LoginPlace;
 import org.sagebionetworks.web.client.place.Profile;
+import org.sagebionetworks.web.client.place.SqlWorksheetPlace;
 import org.sagebionetworks.web.client.place.Synapse;
 import org.sagebionetworks.web.client.place.Synapse.EntityArea;
 import org.sagebionetworks.web.client.place.Synapse.ProfileArea;
+import org.sagebionetworks.web.client.place.TableLineagePlace;
 import org.sagebionetworks.web.client.security.AuthenticationController;
 import org.sagebionetworks.web.client.utils.Callback;
 import org.sagebionetworks.web.client.utils.CallbackP;
@@ -1437,6 +1439,10 @@ public class EntityActionControllerImpl
       );
       actionMenu.setActionVisible(Action.EDIT_TABLE_DATA, canEditResults);
       actionMenu.setActionVisible(Action.SHOW_TABLE_SCHEMA, true);
+      actionMenu.setActionVisible(Action.VIEW_LINEAGE, true);
+      actionMenu.setActionListener(Action.VIEW_LINEAGE, this);
+      actionMenu.setActionVisible(Action.OPEN_SQL_WORKSHEET, true);
+      actionMenu.setActionListener(Action.OPEN_SQL_WORKSHEET, this);
       actionMenu.setActionVisible(
         Action.SHOW_VIEW_SCOPE,
         isDefinedByScope(entityBundle.getEntity())
@@ -1451,6 +1457,8 @@ public class EntityActionControllerImpl
       actionMenu.setActionVisible(Action.UPLOAD_TABLE_DATA, false);
       actionMenu.setActionVisible(Action.EDIT_TABLE_DATA, false);
       actionMenu.setActionVisible(Action.SHOW_TABLE_SCHEMA, false);
+      actionMenu.setActionVisible(Action.VIEW_LINEAGE, false);
+      actionMenu.setActionVisible(Action.OPEN_SQL_WORKSHEET, false);
       actionMenu.setActionVisible(Action.SHOW_VIEW_SCOPE, false);
       actionMenu.setActionVisible(
         Action.EDIT_ENTITYREF_COLLECTION_ITEMS,
@@ -2012,6 +2020,21 @@ public class EntityActionControllerImpl
         break;
       case VIEW_DEFINING_SQL:
         onViewDefiningSql();
+        break;
+      case VIEW_LINEAGE:
+        getGlobalApplicationState()
+          .getPlaceChanger()
+          .goTo(
+            new TableLineagePlace(
+              entityBundle.getEntity().getId() +
+              getVersionIfNotLatest().map(v -> "." + v).orElse("")
+            )
+          );
+        break;
+      case OPEN_SQL_WORKSHEET:
+        getGlobalApplicationState()
+          .getPlaceChanger()
+          .goTo(new SqlWorksheetPlace(entityBundle.getEntity().getId()));
         break;
       case MOVE_ENTITY:
         onMove();

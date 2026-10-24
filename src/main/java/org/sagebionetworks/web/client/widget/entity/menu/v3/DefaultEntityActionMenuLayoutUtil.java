@@ -405,6 +405,10 @@ public class DefaultEntityActionMenuLayoutUtil {
             ActionViewProps
               .create(Action.SHOW_TABLE_SCHEMA)
               .setVariant("outlined"),
+            ActionViewProps.create(Action.VIEW_LINEAGE).setVariant("outlined"),
+            ActionViewProps
+              .create(Action.OPEN_SQL_WORKSHEET)
+              .setVariant("outlined"),
             ActionViewProps
               .create(Action.CREATE_NEW_GRID)
               .setVariant("outlined")
@@ -467,6 +471,10 @@ public class DefaultEntityActionMenuLayoutUtil {
               .setVariant("outlined"),
             ActionViewProps
               .create(Action.SHOW_TABLE_SCHEMA)
+              .setVariant("outlined"),
+            ActionViewProps.create(Action.VIEW_LINEAGE).setVariant("outlined"),
+            ActionViewProps
+              .create(Action.OPEN_SQL_WORKSHEET)
               .setVariant("outlined"),
             ActionViewProps
               .create(Action.CREATE_NEW_GRID)
@@ -574,6 +582,10 @@ public class DefaultEntityActionMenuLayoutUtil {
               .setVariant("outlined"),
             ActionViewProps
               .create(Action.SHOW_TABLE_SCHEMA)
+              .setVariant("outlined"),
+            ActionViewProps.create(Action.VIEW_LINEAGE).setVariant("outlined"),
+            ActionViewProps
+              .create(Action.OPEN_SQL_WORKSHEET)
               .setVariant("outlined")
           )
         );
@@ -629,6 +641,10 @@ public class DefaultEntityActionMenuLayoutUtil {
               .setVariant("outlined"),
             ActionViewProps
               .create(Action.SHOW_TABLE_SCHEMA)
+              .setVariant("outlined"),
+            ActionViewProps.create(Action.VIEW_LINEAGE).setVariant("outlined"),
+            ActionViewProps
+              .create(Action.OPEN_SQL_WORKSHEET)
               .setVariant("outlined")
           )
         );

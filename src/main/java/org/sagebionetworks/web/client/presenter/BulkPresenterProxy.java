@@ -53,10 +53,12 @@ import org.sagebionetworks.web.client.place.Profile;
 import org.sagebionetworks.web.client.place.Quiz;
 import org.sagebionetworks.web.client.place.SearchV2Place;
 import org.sagebionetworks.web.client.place.SignedToken;
+import org.sagebionetworks.web.client.place.SqlWorksheetPlace;
 import org.sagebionetworks.web.client.place.StandaloneWiki;
 import org.sagebionetworks.web.client.place.SubscriptionPlace;
 import org.sagebionetworks.web.client.place.Synapse;
 import org.sagebionetworks.web.client.place.SynapseForumPlace;
+import org.sagebionetworks.web.client.place.TableLineagePlace;
 import org.sagebionetworks.web.client.place.Team;
 import org.sagebionetworks.web.client.place.TeamSearch;
 import org.sagebionetworks.web.client.place.Trash;
@@ -548,6 +550,42 @@ public class BulkPresenterProxy extends AbstractActivity {
             DataCatalogPagePresenter presenter =
               ginjector.getDataCatalogPagePresenter();
             presenter.setPlace((DataCatalogPagePlace) place);
+            presenter.start(panel, eventBus);
+          }
+
+          @Override
+          public void onFailure(Throwable caught) {
+            loadError(caught);
+          }
+        }
+      );
+    } else if (place instanceof SqlWorksheetPlace) {
+      GWT.runAsync(
+        SqlWorksheetPlace.class,
+        new RunAsyncCallback() {
+          @Override
+          public void onSuccess() {
+            SqlWorksheetPresenter presenter =
+              ginjector.getSqlWorksheetPresenter();
+            presenter.setPlace((SqlWorksheetPlace) place);
+            presenter.start(panel, eventBus);
+          }
+
+          @Override
+          public void onFailure(Throwable caught) {
+            loadError(caught);
+          }
+        }
+      );
+    } else if (place instanceof TableLineagePlace) {
+      GWT.runAsync(
+        TableLineagePlace.class,
+        new RunAsyncCallback() {
+          @Override
+          public void onSuccess() {
+            TableLineagePresenter presenter =
+              ginjector.getTableLineagePresenter();
+            presenter.setPlace((TableLineagePlace) place);
             presenter.start(panel, eventBus);
           }
 

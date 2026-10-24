@@ -44,10 +44,12 @@ import org.sagebionetworks.web.client.presenter.ProfilePresenter;
 import org.sagebionetworks.web.client.presenter.QuizPresenter;
 import org.sagebionetworks.web.client.presenter.SearchV2Presenter;
 import org.sagebionetworks.web.client.presenter.SignedTokenPresenter;
+import org.sagebionetworks.web.client.presenter.SqlWorksheetPresenter;
 import org.sagebionetworks.web.client.presenter.SubscriptionPresenter;
 import org.sagebionetworks.web.client.presenter.SynapseForumPresenter;
 import org.sagebionetworks.web.client.presenter.SynapseStandaloneWikiPresenter;
 import org.sagebionetworks.web.client.presenter.SynapseWikiPresenter;
+import org.sagebionetworks.web.client.presenter.TableLineagePresenter;
 import org.sagebionetworks.web.client.presenter.TeamPresenter;
 import org.sagebionetworks.web.client.presenter.TeamSearchPresenter;
 import org.sagebionetworks.web.client.presenter.TrashPresenter;
@@ -895,4 +897,8 @@ public interface PortalGinInjector {
   CreateGridSessionDialog getCreateGridSessionDialog();
 
   CuratorDashboardPresenter getCuratorDashboardPresenter();
+
+  SqlWorksheetPresenter getSqlWorksheetPresenter();
+
+  TableLineagePresenter getTableLineagePresenter();
 }
