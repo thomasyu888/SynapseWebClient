@@ -18,6 +18,7 @@ import com.google.gwt.event.shared.EventBus;
 import com.google.gwt.place.shared.Place;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.web.bindery.event.shared.binder.EventBinder;
+import java.util.ArrayList;
 import java.util.Collections;
 import org.junit.Before;
 import org.junit.Test;
@@ -54,6 +55,7 @@ import org.sagebionetworks.web.client.cache.EntityId2BundleCacheImpl;
 import org.sagebionetworks.web.client.cookie.CookieProvider;
 import org.sagebionetworks.web.client.events.ChangeSynapsePlaceEvent;
 import org.sagebionetworks.web.client.events.EntityUpdatedEvent;
+import org.sagebionetworks.web.client.place.SqlWorksheetPlace;
 import org.sagebionetworks.web.client.place.Synapse;
 import org.sagebionetworks.web.client.place.Synapse.EntityArea;
 import org.sagebionetworks.web.client.security.AuthenticationController;
@@ -63,6 +65,7 @@ import org.sagebionetworks.web.client.widget.ProjectInfo;
 import org.sagebionetworks.web.client.widget.entity.EntityMetadata;
 import org.sagebionetworks.web.client.widget.entity.EntityPageTop;
 import org.sagebionetworks.web.client.widget.entity.EntityPageTopView;
+import org.sagebionetworks.web.client.widget.entity.SqlWorksheetRedirect;
 import org.sagebionetworks.web.client.widget.entity.WikiPageWidget;
 import org.sagebionetworks.web.client.widget.entity.controller.EntityActionController;
 import org.sagebionetworks.web.client.widget.entity.file.ProjectTitleBar;
@@ -354,6 +357,61 @@ public class EntityPageTopTest {
     when(mockMetadataInnerTab.isContentStale()).thenReturn(true);
     when(mockTabs.getTabCount()).thenReturn(7);
     when(mockLinkEntity.getLinksTo()).thenReturn(mockLinkReference);
+  }
+
+  @Test
+  public void testConfigureEntityWithSqlWorksheet() {
+    String worksheetId = "syn9602670";
+    AsyncMockStubber
+      .callFailureWith(
+        new IllegalArgumentException(
+          "Cannot create new instance. Unknown class: " +
+          SqlWorksheetRedirect.SQL_WORKSHEET_CONCRETE_TYPE
+        )
+      )
+      .when(mockSynapseJavascriptClient)
+      .getEntityBundleFromCache(eq(worksheetId), any());
+    EntityHeader worksheetHeader = new EntityHeader();
+    worksheetHeader.setId(worksheetId);
+    worksheetHeader.setType(SqlWorksheetRedirect.SQL_WORKSHEET_CONCRETE_TYPE);
+    AsyncMockStubber
+      .callSuccessWith(
+        new ArrayList<>(Collections.singletonList(worksheetHeader))
+      )
+      .when(mockSynapseJavascriptClient)
+      .getEntityHeaderBatch(any(), any());
+
+    // A click on the worksheet in the Files tab
+    pageTop.configureEntity(worksheetId, null);
+
+    ArgumentCaptor<Place> placeCaptor = ArgumentCaptor.forClass(Place.class);
+    verify(mockPlaceChanger).goTo(placeCaptor.capture());
+    assertEquals(
+      worksheetId,
+      ((SqlWorksheetPlace) placeCaptor.getValue()).toToken()
+    );
+    verify(mockView, never()).showErrorMessage(anyString());
+  }
+
+  @Test
+  public void testConfigureEntityWithUnreadableEntity() {
+    String entityId = "syn9602699";
+    AsyncMockStubber
+      .callFailureWith(new IllegalArgumentException("Something else"))
+      .when(mockSynapseJavascriptClient)
+      .getEntityBundleFromCache(eq(entityId), any());
+    EntityHeader folderHeader = new EntityHeader();
+    folderHeader.setId(entityId);
+    folderHeader.setType("org.sagebionetworks.repo.model.Folder");
+    AsyncMockStubber
+      .callSuccessWith(new ArrayList<>(Collections.singletonList(folderHeader)))
+      .when(mockSynapseJavascriptClient)
+      .getEntityHeaderBatch(any(), any());
+
+    pageTop.configureEntity(entityId, null);
+
+    verify(mockView).showErrorMessage("Something else");
+    verify(mockPlaceChanger, never()).goTo(any(SqlWorksheetPlace.class));
   }
 
   @Test

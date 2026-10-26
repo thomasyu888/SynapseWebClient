@@ -59,6 +59,7 @@ import org.sagebionetworks.web.client.presenter.EntityPresenterEventBinder;
 import org.sagebionetworks.web.client.security.AuthenticationController;
 import org.sagebionetworks.web.client.view.EntityView;
 import org.sagebionetworks.web.client.widget.entity.EntityPageTop;
+import org.sagebionetworks.web.client.widget.entity.SqlWorksheetRedirect;
 import org.sagebionetworks.web.client.widget.entity.controller.StuAlert;
 import org.sagebionetworks.web.client.widget.header.Header;
 import org.sagebionetworks.web.client.widget.team.OpenTeamInvitationsWidget;
@@ -282,7 +283,7 @@ public class EntityPresenterTest {
       );
     EntityHeader worksheetHeader = new EntityHeader();
     worksheetHeader.setId(entityId);
-    worksheetHeader.setType(EntityPresenter.SQL_WORKSHEET_CONCRETE_TYPE);
+    worksheetHeader.setType(SqlWorksheetRedirect.SQL_WORKSHEET_CONCRETE_TYPE);
     AsyncMockStubber
       .callSuccessWith(
         new ArrayList<>(Collections.singletonList(worksheetHeader))

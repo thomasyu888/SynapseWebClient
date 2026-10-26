@@ -513,7 +513,13 @@ public class EntityPageTop implements SynapseWidgetPresenter, IsWidget {
 
       @Override
       public void onFailure(Throwable caught) {
-        view.showErrorMessage(caught.getMessage());
+        // A SQL worksheet cannot be read as an entity here (see SqlWorksheetRedirect).
+        SqlWorksheetRedirect.openIfSqlWorksheet(
+          synapseJavascriptClient,
+          placeChanger,
+          entityId,
+          () -> view.showErrorMessage(caught.getMessage())
+        );
       }
     };
     if (
