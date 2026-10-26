@@ -10,9 +10,11 @@ import static org.sagebionetworks.web.client.utils.FutureUtils.getDoneFuture;
 
 import com.google.common.util.concurrent.FluentFuture;
 import com.google.gwt.event.shared.EventBus;
+import com.google.gwt.place.shared.Place;
 import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.web.bindery.event.shared.binder.EventBinder;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.junit.Before;
@@ -49,6 +51,7 @@ import org.sagebionetworks.web.client.jsinterop.KeyFactory;
 import org.sagebionetworks.web.client.jsinterop.reactquery.InvalidateQueryFilters;
 import org.sagebionetworks.web.client.jsinterop.reactquery.QueryClient;
 import org.sagebionetworks.web.client.jsinterop.reactquery.QueryKey;
+import org.sagebionetworks.web.client.place.SqlWorksheetPlace;
 import org.sagebionetworks.web.client.place.Synapse;
 import org.sagebionetworks.web.client.place.Synapse.EntityArea;
 import org.sagebionetworks.web.client.presenter.EntityPresenter;
@@ -262,6 +265,68 @@ public class EntityPresenterTest {
     verify(mockView).setOpenTeamInvitesWidget(mockOpenInviteWidget);
     verify(mockHeaderWidget).refresh();
     verify(mockSynAlert, times(3)).clear();
+  }
+
+  @Test
+  public void testRefreshWithSqlWorksheet() {
+    Exception unreadable = new IllegalArgumentException(
+      "Unknown class: org.sagebionetworks.repo.model.table.SqlWorksheet"
+    );
+    AsyncMockStubber
+      .callFailureWith(unreadable)
+      .when(mockSynapseJavascriptClient)
+      .getEntityBundle(
+        anyString(),
+        any(EntityBundleRequest.class),
+        any(AsyncCallback.class)
+      );
+    EntityHeader worksheetHeader = new EntityHeader();
+    worksheetHeader.setId(entityId);
+    worksheetHeader.setType(EntityPresenter.SQL_WORKSHEET_CONCRETE_TYPE);
+    AsyncMockStubber
+      .callSuccessWith(
+        new ArrayList<>(Collections.singletonList(worksheetHeader))
+      )
+      .when(mockSynapseJavascriptClient)
+      .getEntityHeaderBatch(anyList(), any(AsyncCallback.class));
+    when(mockPlace.getVersionNumber()).thenReturn(null);
+    when(mockPlace.getEntityId()).thenReturn(entityId);
+
+    entityPresenter.setPlace(mockPlace);
+
+    ArgumentCaptor<Place> placeCaptor = ArgumentCaptor.forClass(Place.class);
+    verify(mockPlaceChanger).goTo(placeCaptor.capture());
+    assertEquals(
+      entityId,
+      ((SqlWorksheetPlace) placeCaptor.getValue()).toToken()
+    );
+    verify(mockSynAlert, never()).handleException(any());
+  }
+
+  @Test
+  public void testRefreshWithUnreadableEntityThatIsNotAWorksheet() {
+    Exception unreadable = new IllegalArgumentException("Something else");
+    AsyncMockStubber
+      .callFailureWith(unreadable)
+      .when(mockSynapseJavascriptClient)
+      .getEntityBundle(
+        anyString(),
+        any(EntityBundleRequest.class),
+        any(AsyncCallback.class)
+      );
+    AsyncMockStubber
+      .callSuccessWith(
+        new ArrayList<>(Collections.singletonList(mockProjectEntityHeader))
+      )
+      .when(mockSynapseJavascriptClient)
+      .getEntityHeaderBatch(anyList(), any(AsyncCallback.class));
+    when(mockPlace.getVersionNumber()).thenReturn(null);
+    when(mockPlace.getEntityId()).thenReturn(entityId);
+
+    entityPresenter.setPlace(mockPlace);
+
+    verify(mockSynAlert).handleException(unreadable);
+    verify(mockPlaceChanger, never()).goTo(any(SqlWorksheetPlace.class));
   }
 
   @Test

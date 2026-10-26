@@ -12,6 +12,8 @@ import com.google.gwt.user.client.ui.AcceptsOneWidget;
 import com.google.gwt.user.client.ui.IsWidget;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.web.bindery.event.shared.binder.EventHandler;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -37,6 +39,7 @@ import org.sagebionetworks.web.client.events.EntityUpdatedEvent;
 import org.sagebionetworks.web.client.jsinterop.KeyFactory;
 import org.sagebionetworks.web.client.jsinterop.reactquery.InvalidateQueryFilters;
 import org.sagebionetworks.web.client.jsinterop.reactquery.QueryClient;
+import org.sagebionetworks.web.client.place.SqlWorksheetPlace;
 import org.sagebionetworks.web.client.place.Synapse;
 import org.sagebionetworks.web.client.place.Synapse.EntityArea;
 import org.sagebionetworks.web.client.security.AuthenticationController;
@@ -55,6 +58,9 @@ import org.sagebionetworks.web.shared.exceptions.NotFoundException;
 public class EntityPresenter
   extends AbstractActivity
   implements EntityView.Presenter, Presenter<Synapse>, IsWidget {
+
+  public static final String SQL_WORKSHEET_CONCRETE_TYPE =
+    "org.sagebionetworks.repo.model.table.SqlWorksheet";
 
   private EntityView view;
   private AuthenticationController authenticationController;
@@ -190,7 +196,7 @@ public class EntityPresenter
           new AsyncCallback<Entity>() {
             @Override
             public void onFailure(Throwable caught) {
-              onError(caught);
+              onEntityLoadFailure(caught);
             }
 
             @Override
@@ -329,7 +335,7 @@ public class EntityPresenter
 
       @Override
       public void onFailure(Throwable caught) {
-        onError(caught);
+        onEntityLoadFailure(caught);
       }
     };
 
@@ -347,6 +353,45 @@ public class EntityPresenter
         callback
       );
     }
+  }
+
+  /**
+   * This client is built with entity classes that do not yet include the SQL worksheet, so a worksheet cannot be read
+   * as an entity here: it opens in the SQL worksheet page instead. Only a failed load pays for the extra lookup.
+   */
+  public void onEntityLoadFailure(final Throwable caught) {
+    if (
+      caught instanceof NotFoundException ||
+      caught instanceof ForbiddenException ||
+      !isValidEntityId(entityId)
+    ) {
+      onError(caught);
+      return;
+    }
+    final String worksheetId = entityId;
+    jsClient.getEntityHeaderBatch(
+      Collections.singletonList(worksheetId),
+      new AsyncCallback<ArrayList<EntityHeader>>() {
+        @Override
+        public void onSuccess(ArrayList<EntityHeader> headers) {
+          if (
+            !headers.isEmpty() &&
+            SQL_WORKSHEET_CONCRETE_TYPE.equals(headers.get(0).getType())
+          ) {
+            globalAppState
+              .getPlaceChanger()
+              .goTo(new SqlWorksheetPlace(worksheetId));
+          } else {
+            onError(caught);
+          }
+        }
+
+        @Override
+        public void onFailure(Throwable headerError) {
+          onError(caught);
+        }
+      }
+    );
   }
 
   public void onError(Throwable caught) {
