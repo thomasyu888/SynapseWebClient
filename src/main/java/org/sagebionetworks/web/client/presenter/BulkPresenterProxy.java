@@ -30,6 +30,7 @@ import org.sagebionetworks.web.client.place.Challenges;
 import org.sagebionetworks.web.client.place.ChangeUsername;
 import org.sagebionetworks.web.client.place.ChatPlace;
 import org.sagebionetworks.web.client.place.ComingSoon;
+import org.sagebionetworks.web.client.place.ComputePlace;
 import org.sagebionetworks.web.client.place.CuratorDashboardPlace;
 import org.sagebionetworks.web.client.place.DataAccessApprovalTokenPlace;
 import org.sagebionetworks.web.client.place.DataAccessManagementPlace;
@@ -566,6 +567,23 @@ public class BulkPresenterProxy extends AbstractActivity {
             CuratorDashboardPresenter presenter =
               ginjector.getCuratorDashboardPresenter();
             presenter.setPlace((CuratorDashboardPlace) place);
+            presenter.start(panel, eventBus);
+          }
+
+          @Override
+          public void onFailure(Throwable caught) {
+            loadError(caught);
+          }
+        }
+      );
+    } else if (place instanceof ComputePlace) {
+      GWT.runAsync(
+        ComputePlace.class,
+        new RunAsyncCallback() {
+          @Override
+          public void onSuccess() {
+            ComputePresenter presenter = ginjector.getComputePresenter();
+            presenter.setPlace((ComputePlace) place);
             presenter.start(panel, eventBus);
           }
 

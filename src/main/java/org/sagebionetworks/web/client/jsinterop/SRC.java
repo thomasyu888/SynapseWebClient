@@ -166,6 +166,7 @@ public class SRC {
       CreateProjectModalProps
     > CreateProjectModal;
     public static ReactComponentType CuratorDashboard;
+    public static ReactComponentType<ComputeSessionPageProps> ComputeSessionPage;
 
     /**
      * Pushes a global toast message. In SWC, you should use {@link DisplayUtils#notify}, rather than calling this method directly.
