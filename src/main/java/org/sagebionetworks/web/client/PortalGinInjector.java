@@ -29,6 +29,7 @@ import org.sagebionetworks.web.client.presenter.EmailInvitationPresenter;
 import org.sagebionetworks.web.client.presenter.EntityPresenter;
 import org.sagebionetworks.web.client.presenter.ErrorPresenter;
 import org.sagebionetworks.web.client.presenter.FollowingPagePresenter;
+import org.sagebionetworks.web.client.presenter.GaasPresenter;
 import org.sagebionetworks.web.client.presenter.GridPagePresenter;
 import org.sagebionetworks.web.client.presenter.HelpPresenter;
 import org.sagebionetworks.web.client.presenter.HomePresenter;
@@ -895,4 +896,6 @@ public interface PortalGinInjector {
   CreateGridSessionDialog getCreateGridSessionDialog();
 
   CuratorDashboardPresenter getCuratorDashboardPresenter();
+
+  GaasPresenter getGaasPresenter();
 }
