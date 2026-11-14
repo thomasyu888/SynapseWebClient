@@ -1,10 +1,12 @@
 package org.sagebionetworks.web.unitserver.filter;
 
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.sagebionetworks.web.server.servlet.filter.CORSFilter.ORIGIN_HEADER;
 import static org.sagebionetworks.web.server.servlet.filter.XFrameOptionsFilter.DENY;
 import static org.sagebionetworks.web.server.servlet.filter.XFrameOptionsFilter.REFERER_HEADER;
+import static org.sagebionetworks.web.server.servlet.filter.XFrameOptionsFilter.SAMEORIGIN;
 import static org.sagebionetworks.web.server.servlet.filter.XFrameOptionsFilter.X_FRAME_OPTIONS_HEADER;
 
 import jakarta.servlet.FilterChain;
@@ -101,5 +103,46 @@ public class XFrameOptionsFilterTest {
         X_FRAME_OPTIONS_HEADER,
         "ALLOW-FROM https://eliteportal.synapse.org/Data%20Access/AI_ML_Acceptable_Use_Policy"
       );
+  }
+
+  @Test
+  public void testRobotsTxtIsFrameableBySameOrigin()
+    throws ServletException, IOException {
+    // The identity broker's silent sign-in lands a hidden same-origin frame on
+    // robots.txt, with no Origin header and, after the login service's
+    // redirect, no Referer either.
+    when(mockRequest.getRequestURI()).thenReturn("/robots.txt");
+    when(mockRequest.getContextPath()).thenReturn("");
+    when(mockRequest.getHeader(ORIGIN_HEADER)).thenReturn(null);
+    when(mockRequest.getHeader(REFERER_HEADER)).thenReturn(null);
+
+    filter.testFilter(mockRequest, mockResponse, mockFilterChain);
+
+    verify(mockResponse).addHeader(X_FRAME_OPTIONS_HEADER, SAMEORIGIN);
+    verify(mockResponse, never()).addHeader(X_FRAME_OPTIONS_HEADER, DENY);
+    verify(mockFilterChain).doFilter(mockRequest, mockResponse);
+  }
+
+  @Test
+  public void testRobotsTxtUnderAContextPath()
+    throws ServletException, IOException {
+    when(mockRequest.getRequestURI()).thenReturn("/portal/robots.txt");
+    when(mockRequest.getContextPath()).thenReturn("/portal");
+
+    filter.testFilter(mockRequest, mockResponse, mockFilterChain);
+
+    verify(mockResponse).addHeader(X_FRAME_OPTIONS_HEADER, SAMEORIGIN);
+  }
+
+  @Test
+  public void testOtherPathsStayDenied() throws ServletException, IOException {
+    when(mockRequest.getRequestURI()).thenReturn("/Portal.html");
+    when(mockRequest.getContextPath()).thenReturn("");
+    when(mockRequest.getHeader(ORIGIN_HEADER)).thenReturn(null);
+
+    filter.testFilter(mockRequest, mockResponse, mockFilterChain);
+
+    verify(mockResponse).addHeader(X_FRAME_OPTIONS_HEADER, DENY);
+    verify(mockResponse, never()).addHeader(X_FRAME_OPTIONS_HEADER, SAMEORIGIN);
   }
 }
