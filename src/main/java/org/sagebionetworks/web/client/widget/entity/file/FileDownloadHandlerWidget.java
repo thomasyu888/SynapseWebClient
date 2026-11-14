@@ -11,6 +11,7 @@ import org.sagebionetworks.repo.model.file.ExternalFileHandle;
 import org.sagebionetworks.repo.model.file.ExternalObjectStoreFileHandle;
 import org.sagebionetworks.repo.model.file.FileHandle;
 import org.sagebionetworks.repo.model.file.FileHandleAssociateType;
+import org.sagebionetworks.repo.model.file.S3FileHandle;
 import org.sagebionetworks.web.client.DisplayConstants;
 import org.sagebionetworks.web.client.DisplayUtils;
 import org.sagebionetworks.web.client.GWTWrapper;
@@ -19,6 +20,7 @@ import org.sagebionetworks.web.client.PortalGinInjector;
 import org.sagebionetworks.web.client.SynapseJSNIUtils;
 import org.sagebionetworks.web.client.SynapseJavascriptClient;
 import org.sagebionetworks.web.client.cookie.CookieProvider;
+import org.sagebionetworks.web.client.jsinterop.ReactMouseEvent;
 import org.sagebionetworks.web.client.place.AccessRequirementsPlace;
 import org.sagebionetworks.web.client.security.AuthenticationController;
 import org.sagebionetworks.web.client.utils.CallbackP;
@@ -46,8 +48,11 @@ public class FileDownloadHandlerWidget
   CookieProvider cookies;
   AwsSdk awsSdk;
   PopupUtilsView popupUtilsView;
+  SRCUserSignedStorageWrapper userSignedStorage;
   FileHandle dataFileHandle;
   JavaScriptObject s3;
+  // set when the direct download link is the FHA servlet URL of an S3 file handle, which may be in user-signed storage
+  String s3DirectDownloadUrl;
 
   @Inject
   public FileDownloadHandlerWidget(
@@ -59,7 +64,8 @@ public class FileDownloadHandlerWidget
     GWTWrapper gwt,
     CookieProvider cookies,
     AwsSdk awsSdk,
-    PopupUtilsView popupUtilsView
+    PopupUtilsView popupUtilsView,
+    SRCUserSignedStorageWrapper userSignedStorage
   ) {
     this.view = view;
     this.ginInjector = ginInjector;
@@ -70,6 +76,7 @@ public class FileDownloadHandlerWidget
     this.cookies = cookies;
     this.awsSdk = awsSdk;
     this.popupUtilsView = popupUtilsView;
+    this.userSignedStorage = userSignedStorage;
     view.setPresenter(this);
   }
 
@@ -110,6 +117,7 @@ public class FileDownloadHandlerWidget
     this.entityBundle = bundle;
     dataFileHandle = getFileHandle();
     s3 = null;
+    s3DirectDownloadUrl = null;
 
     boolean isFileEntity = bundle.getEntity() instanceof FileEntity;
     boolean hasUnmetAccessRequirements =
@@ -147,6 +155,12 @@ public class FileDownloadHandlerWidget
           if (directDownloadUrl.startsWith(sftpProxy)) {
             view.setIsSFTPDownload();
           } else {
+            if (
+              dataFileHandle instanceof S3FileHandle &&
+              authController.isLoggedIn()
+            ) {
+              s3DirectDownloadUrl = directDownloadUrl;
+            }
             view.setIsDirectDownloadLink(directDownloadUrl);
           }
         }
@@ -258,7 +272,35 @@ public class FileDownloadHandlerWidget
   }
 
   @Override
-  public void onDirectDownloadClicked() {
+  public void onDirectDownloadClicked(ReactMouseEvent event) {
     // user already directly sent to download fha, could use this hook to send an event to analytics if we want
+    if (s3DirectDownloadUrl == null) {
+      return;
+    }
+    // Files in user-signed storage are never presigned by Synapse, so the FHA servlet cannot serve them.
+    // Try the browser-signed download first; if the file is not user-signed, follow the link as before.
+    final String fallbackUrl = s3DirectDownloadUrl;
+    event.preventDefault();
+    userSignedStorage
+      .downloadUserSignedFile(
+        entityBundle.getEntity().getId(),
+        dataFileHandle.getId(),
+        authController.getCurrentUserAccessToken()
+      )
+      .then(
+        downloaded -> {
+          if (!Boolean.TRUE.equals(downloaded)) {
+            gwt.assignThisWindowWith(fallbackUrl);
+          }
+          return null;
+        },
+        error -> {
+          popupUtilsView.showErrorMessage(
+            "Unable to download the file",
+            error == null ? null : error.toString()
+          );
+          return null;
+        }
+      );
   }
 }

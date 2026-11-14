@@ -5,10 +5,14 @@ import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.gwt.core.client.JavaScriptObject;
+import elemental2.promise.IThenable;
+import elemental2.promise.Promise;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Before;
@@ -34,12 +38,14 @@ import org.sagebionetworks.web.client.SynapseJSNIUtils;
 import org.sagebionetworks.web.client.SynapseJavascriptClient;
 import org.sagebionetworks.web.client.SynapseProperties;
 import org.sagebionetworks.web.client.cookie.CookieProvider;
+import org.sagebionetworks.web.client.jsinterop.ReactMouseEvent;
 import org.sagebionetworks.web.client.place.AccessRequirementsPlace;
 import org.sagebionetworks.web.client.security.AuthenticationController;
 import org.sagebionetworks.web.client.utils.CallbackP;
 import org.sagebionetworks.web.client.widget.aws.AwsSdk;
 import org.sagebionetworks.web.client.widget.entity.file.FileDownloadHandlerWidget;
 import org.sagebionetworks.web.client.widget.entity.file.FileDownloadMenuItemView;
+import org.sagebionetworks.web.client.widget.entity.file.SRCUserSignedStorageWrapper;
 import org.sagebionetworks.web.client.widget.entity.menu.v3.EntityActionMenu;
 import org.sagebionetworks.web.shared.WebConstants;
 import org.sagebionetworks.web.shared.exceptions.RestServiceException;
@@ -97,8 +103,23 @@ public class FileDownloadMenuItemTest {
   @Mock
   EntityActionMenu mockActionMenu;
 
+  @Mock
+  SRCUserSignedStorageWrapper mockUserSignedStorage;
+
+  @Mock
+  Promise<Boolean> mockUserSignedDownloadPromise;
+
+  @Mock
+  ReactMouseEvent mockClickEvent;
+
   @Captor
   ArgumentCaptor<CallbackP> callbackPCaptor;
+
+  @Captor
+  ArgumentCaptor<IThenable.ThenOnFulfilledCallbackFn> promiseThenCaptor;
+
+  @Captor
+  ArgumentCaptor<IThenable.ThenOnRejectedCallbackFn> promiseRejectedCaptor;
 
   FileDownloadHandlerWidget widget;
   List<FileHandle> fileHandles;
@@ -123,7 +144,8 @@ public class FileDownloadMenuItemTest {
         mockGwt,
         mockCookies,
         mockAwsSdk,
-        mockPopupUtilsView
+        mockPopupUtilsView,
+        mockUserSignedStorage
       );
     when(
       mockSynapseProperties.getSynapseProperty(WebConstants.SFTP_PROXY_ENDPOINT)
@@ -306,6 +328,144 @@ public class FileDownloadMenuItemTest {
         RestrictableObjectType.ENTITY.toString()
       );
     assertNull(widget.getFileHandle());
+  }
+
+  public static final String ACCESS_TOKEN = "fake-access-token";
+
+  private void configureWithS3FileHandle(String fileHandleId) {
+    S3FileHandle fileHandle = new S3FileHandle();
+    fileHandle.setFileName("myFileName.png");
+    fileHandle.setId(fileHandleId);
+    fileHandles.add(fileHandle);
+    when(mockFileEntity.getDataFileHandleId()).thenReturn(fileHandleId);
+    when(mockAuthController.isLoggedIn()).thenReturn(true);
+    when(mockAuthController.getCurrentUserAccessToken())
+      .thenReturn(ACCESS_TOKEN);
+    when(
+      mockUserSignedStorage.downloadUserSignedFile(
+        anyString(),
+        anyString(),
+        anyString()
+      )
+    )
+      .thenReturn(mockUserSignedDownloadPromise);
+    widget.configure(
+      mockActionMenu,
+      mockEntityBundle,
+      mockRestrictionInformation
+    );
+    // the action is still a link to the FHA servlet
+    verify(mockView).setIsDirectDownloadLink(fileHandleAssociationUrl);
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testS3DownloadTriesUserSignedStorageFirst() throws Exception {
+    String fileHandleId = "22";
+    configureWithS3FileHandle(fileHandleId);
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    // the link is not followed until user-signed storage has answered
+    verify(mockClickEvent).preventDefault();
+    verify(mockUserSignedStorage)
+      .downloadUserSignedFile(ENTITY_ID, fileHandleId, ACCESS_TOKEN);
+    verify(mockUserSignedDownloadPromise)
+      .then(promiseThenCaptor.capture(), promiseRejectedCaptor.capture());
+    verify(mockGwt, never()).assignThisWindowWith(anyString());
+
+    // user-signed: the browser downloaded it, so the FHA servlet is not used
+    promiseThenCaptor.getValue().onInvoke(Boolean.TRUE);
+    verify(mockGwt, never()).assignThisWindowWith(anyString());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testS3DownloadFallsBackWhenNotUserSigned() throws Exception {
+    configureWithS3FileHandle("22");
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    verify(mockUserSignedDownloadPromise)
+      .then(promiseThenCaptor.capture(), promiseRejectedCaptor.capture());
+    // not user-signed: follow the original link to the FHA servlet
+    promiseThenCaptor.getValue().onInvoke(Boolean.FALSE);
+    verify(mockGwt).assignThisWindowWith(fileHandleAssociationUrl);
+    verify(mockPopupUtilsView, never()).showErrorMessage(any(), any());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testS3DownloadUserSignedFailure() throws Exception {
+    configureWithS3FileHandle("22");
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    verify(mockUserSignedDownloadPromise)
+      .then(promiseThenCaptor.capture(), promiseRejectedCaptor.capture());
+    String error = "IdentityBrokerError: NOT_LINKED";
+    promiseRejectedCaptor.getValue().onInvoke(error);
+    verify(mockPopupUtilsView).showErrorMessage(anyString(), eq(error));
+    verify(mockGwt, never()).assignThisWindowWith(anyString());
+  }
+
+  @Test
+  public void testExternalFileDownloadClickedSkipsUserSignedStorage() {
+    String fileHandleId = "22";
+    fileHandles.add(mockFileHandle);
+    when(mockFileEntity.getDataFileHandleId()).thenReturn(fileHandleId);
+    when(mockFileHandle.getId()).thenReturn(fileHandleId);
+    when(mockFileHandle.getExternalURL()).thenReturn("http://example.org/a");
+    when(mockAuthController.isLoggedIn()).thenReturn(true);
+    widget.configure(
+      mockActionMenu,
+      mockEntityBundle,
+      mockRestrictionInformation
+    );
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    // not an S3 file handle: the link is followed as before
+    verifyNoInteractions(mockClickEvent, mockUserSignedStorage);
+  }
+
+  @Test
+  public void testS3DownloadAnonymousSkipsUserSignedStorage() {
+    S3FileHandle fileHandle = new S3FileHandle();
+    fileHandle.setId("22");
+    fileHandles.add(fileHandle);
+    when(mockFileEntity.getDataFileHandleId()).thenReturn("22");
+    when(mockAuthController.isLoggedIn()).thenReturn(false);
+    widget.configure(
+      mockActionMenu,
+      mockEntityBundle,
+      mockRestrictionInformation
+    );
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    verifyNoInteractions(mockClickEvent, mockUserSignedStorage);
+  }
+
+  @Test
+  public void testUnmetAccessRequirementLinkSkipsUserSignedStorage() {
+    S3FileHandle fileHandle = new S3FileHandle();
+    fileHandle.setId("22");
+    fileHandles.add(fileHandle);
+    when(mockFileEntity.getDataFileHandleId()).thenReturn("22");
+    when(mockAuthController.isLoggedIn()).thenReturn(true);
+    when(mockRestrictionInformation.getHasUnmetAccessRequirement())
+      .thenReturn(true);
+    widget.configure(
+      mockActionMenu,
+      mockEntityBundle,
+      mockRestrictionInformation
+    );
+
+    widget.onDirectDownloadClicked(mockClickEvent);
+
+    // the link goes to the access requirements page, not to the file
+    verifyNoInteractions(mockClickEvent, mockUserSignedStorage);
   }
 
   @Test //SWC-6024

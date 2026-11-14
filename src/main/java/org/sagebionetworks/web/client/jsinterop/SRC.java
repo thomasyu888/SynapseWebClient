@@ -239,6 +239,23 @@ public class SRC {
     );
   }
 
+  /**
+   * Files in user-signed S3 storage are never presigned by Synapse: the browser gets temporary credentials from
+   * the identity broker and signs the GetObject itself.
+   */
+  @JsType(isNative = true)
+  public static class UserSignedStorage {
+
+    /**
+     * Downloads a FileEntity's file if it is in user-signed storage.
+     *
+     * @return a Promise that resolves to false if the file is not in user-signed storage
+     */
+    public static native Promise<Boolean> downloadUserSignedFile(
+      DownloadUserSignedFileArgs args
+    );
+  }
+
   @JsType(isNative = true)
   public static class Analytics {
 

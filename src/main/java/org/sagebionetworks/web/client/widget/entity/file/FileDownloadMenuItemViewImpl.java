@@ -33,7 +33,7 @@ public class FileDownloadMenuItemViewImpl implements FileDownloadMenuItemView {
       };
     directDownloadClickHandler =
       event -> {
-        presenter.onDirectDownloadClicked();
+        presenter.onDirectDownloadClicked(event);
       };
     sftpDownloadClickHandler =
       event -> {

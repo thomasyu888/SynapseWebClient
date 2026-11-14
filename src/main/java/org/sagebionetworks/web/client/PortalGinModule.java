@@ -448,6 +448,8 @@ import org.sagebionetworks.web.client.widget.entity.file.ProjectTitleBarView;
 import org.sagebionetworks.web.client.widget.entity.file.ProjectTitleBarViewImpl;
 import org.sagebionetworks.web.client.widget.entity.file.S3DirectLoginDialog;
 import org.sagebionetworks.web.client.widget.entity.file.S3DirectLoginDialogImpl;
+import org.sagebionetworks.web.client.widget.entity.file.SRCUserSignedStorageWrapper;
+import org.sagebionetworks.web.client.widget.entity.file.SRCUserSignedStorageWrapperImpl;
 import org.sagebionetworks.web.client.widget.entity.file.downloadlist.PackageSizeSummaryView;
 import org.sagebionetworks.web.client.widget.entity.file.downloadlist.PackageSizeSummaryViewImpl;
 import org.sagebionetworks.web.client.widget.entity.menu.v3.EntityActionMenu;
@@ -2392,6 +2394,11 @@ public abstract class PortalGinModule {
   @Binds
   abstract SRCUploadFileWrapper bindSRCUploadFileWrapper(
     SRCUploadFileWrapperImpl impl
+  );
+
+  @Binds
+  abstract SRCUserSignedStorageWrapper bindSRCUserSignedStorageWrapper(
+    SRCUserSignedStorageWrapperImpl impl
   );
 
   @Binds
